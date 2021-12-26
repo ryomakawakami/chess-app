@@ -50,3 +50,16 @@ class Matches(db.Model):
     def save(self):
         db.session.add(self)
         db.session.commit()
+
+class MatchStates(db.Model):
+    __tablename__ = 'match_states'
+
+    id = db.Column(db.Integer(), primary_key=True)
+    match_id = db.Column(db.Integer(), db.ForeignKey(Matches.id), nullable=False)
+    board = db.Column(db.Integer(), default=0)
+    turn = db.Column(db.Integer(), default=1)
+    done = db.Column(db.Boolean(), default=False)
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()

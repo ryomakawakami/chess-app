@@ -3,7 +3,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
 from sqlalchemy import or_
 
-from models import Matches
+from models import Matches, MatchStates, Stats
 
 match_ns = Namespace('match', description='A namespace for matches.')
 
@@ -18,8 +18,16 @@ match_model = match_ns.model('Match', {
     'status': fields.String()
 })
 
-join_model = match_ns.model('Join', {
+id_model = match_ns.model('Id', {
     'id': fields.Integer()
+})
+
+match_state_model = match_ns.model('State', {
+    'id': fields.Integer(),
+    'match_id': fields.Integer(),
+    'board': fields.Integer(),
+    'turn': fields.Integer(),
+    'done': fields.Boolean()
 })
 
 @match_ns.route('/create')
@@ -33,13 +41,6 @@ class MatchResource(Resource):
         match.save()
         return match, 201
 
-@match_ns.route('/all')
-class MatchesResource(Resource):
-    @match_ns.marshal_list_with(match_model)
-    @jwt_required()
-    def get(self):
-        return Matches.query.all()
-
 @match_ns.route('/join')
 class MatchesResource(Resource):
     @match_ns.marshal_list_with(match_model)
@@ -49,7 +50,7 @@ class MatchesResource(Resource):
         return Matches.query.filter(or_(Matches.status == 'waiting', Matches.status == 'playing'),
             or_(Matches.username1 == user, Matches.username2 == user, Matches.username2 == '')).all()
 
-    @match_ns.expect(join_model)
+    @match_ns.expect(id_model)
     @match_ns.marshal_with(match_model)
     @jwt_required()
     def post(self):
@@ -68,6 +69,67 @@ class MatchesResource(Resource):
         match.status = 'playing'
         match.save()
 
-        # TODO: Initialize a new MatchState
+        # Initialize a match
+        state = MatchStates(match_id=match.id)
+        state.save()
 
         return match
+
+@match_ns.route('/match')
+class InMatchResource(Resource):
+    @match_ns.marshal_list_with(match_state_model)
+    @jwt_required()
+    def get(self):
+        user = get_jwt_identity()
+        data = request.get_json()
+        id = data.get('id')
+
+        # User must be participating in match
+        match = Matches.query.filter_by(id=id).first()
+        if user != match.username1 and user != match.username2:
+            return 'error', 400
+
+        return MatchStates.query.filter_by(match_id=id).first()
+
+    @match_ns.expect(id_model)  # TODO: Change to a model with ID and the move that the user wants to make
+    @match_ns.marshal_with(match_state_model)
+    @jwt_required()
+    def post(self):
+        user = get_jwt_identity()
+        data = request.get_json()
+        id = data.get('id')
+        # move = data.get('move')
+
+        # User must be participating in match
+        match = Matches.query.filter_by(id=id).first()
+        if user != match.username1 and user != match.username2:
+            return 'error', 400
+
+        # Make sure it's their turn
+        match_state = MatchStates.query.filter_by(match_id=id).first()
+        if user == match.username1 and match_state.turn != 1:
+            return 'error', 400
+        if user == match.username2 and match_state.turn != 2:
+            return 'error', 400
+
+        # Verify move and make move
+        # TODO
+        match_state.board += 1
+
+        # See if they won
+        if match_state.board == 2:  # Temporary win condition
+            match_state.done = True
+            # TODO: Create a Result OR update the corresponding Result entry for the current match_id
+            # For second option, the Result entry should be created when MatchState is created
+
+            # TODO: Update Stats
+
+        # Next player's turn
+        if match_state.turn == 1:
+            match_state.turn = 2
+        else:
+            match_state.turn = 1
+
+        match_state.save()
+
+        return match_state
