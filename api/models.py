@@ -35,3 +35,18 @@ class Stats(db.Model):
     def save(self):
         db.session.add(self)
         db.session.commit()
+
+class Matches(db.Model):
+    __tablename__ = 'matches'
+
+    id = db.Column(db.Integer(), primary_key=True)
+    username1 = db.Column(db.String(), db.ForeignKey(User.username), nullable=False)
+    username2 = db.Column(db.String(), db.ForeignKey(User.username), nullable=False)
+    status = db.Column(db.String(), default='waiting')
+
+    user1 = db.relationship('User', foreign_keys='Matches.username1')
+    user2 = db.relationship('User', foreign_keys='Matches.username2')
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()

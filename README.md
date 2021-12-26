@@ -1,8 +1,16 @@
 # chess-app
 
-https://blog.miguelgrinberg.com/post/how-to-create-a-react--flask-project
+Setup
 
 ```
-yarn start
-yarn start-api
+cd api
+pipenv shell
+pipenv install
+```
+
+Run
+
+```
+cd api
+python run.py
 ```

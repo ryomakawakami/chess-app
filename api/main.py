@@ -5,7 +5,8 @@ from flask_restx import Api
 
 from auth import auth_ns
 from exts import db
-from models import User, Stats
+from matches import match_ns
+from models import User, Stats, Matches
 from stats import stats_ns
 
 
@@ -24,12 +25,14 @@ def create_app(config):
     def make_shell_context():
         return {
             'db': db,
+            'Match': Matches,
             'Stats': Stats,
             'User': User
         }
 
     api = Api(app, doc='/docs')
     api.add_namespace(auth_ns)
+    api.add_namespace(match_ns)
     api.add_namespace(stats_ns)
 
     return app
