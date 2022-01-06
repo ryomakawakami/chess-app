@@ -1,3 +1,5 @@
+import datetime
+
 from flask import request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
@@ -119,10 +121,22 @@ class InMatchResource(Resource):
         # See if they won
         if match_state.board == 2:  # Temporary win condition
             match_state.done = True
-            # TODO: Create a Result OR update the corresponding Result entry for the current match_id
-            # For second option, the Result entry should be created when MatchState is created
 
-            # TODO: Update Stats
+            # Update match object
+            match.end = datetime.datetime.now()
+            match.winner = match_state.turn
+            match.status = 'ended'
+            match.save()
+
+            # Update stats
+            stats1 = Stats.query.filter_by(username=match.username1).first()
+            stats2 = Stats.query.filter_by(username=match.username2).first()
+            if match_state.turn == 1:
+                stats1.update('win')
+                stats2.update('loss')
+            else:
+                stats1.update('loss')
+                stats2.update('win')
 
         # Next player's turn
         if match_state.turn == 1:

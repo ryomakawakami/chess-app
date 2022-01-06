@@ -1,4 +1,5 @@
 from exts import db
+from sqlalchemy.sql import func
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -43,6 +44,9 @@ class Matches(db.Model):
     username1 = db.Column(db.String(), db.ForeignKey(User.username), nullable=False)
     username2 = db.Column(db.String(), db.ForeignKey(User.username), nullable=False)
     status = db.Column(db.String(), default='waiting')
+    winner = db.Column(db.Integer(), default=0)
+    start = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    end = db.Column(db.DateTime(timezone=True), default=func.now())
 
     user1 = db.relationship('User', foreign_keys='Matches.username1')
     user2 = db.relationship('User', foreign_keys='Matches.username2')
